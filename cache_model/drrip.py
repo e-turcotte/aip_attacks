@@ -4,12 +4,12 @@ import sys
 import random
 
 # === Cache Configuration Macros ===
-NUM_SETS = 64
-ASSOC = 8
+NUM_SETS = 16
+ASSOC = 4
 MAX_RRPV = 3
 NUM_LEADER_SETS = 2     # per policy
-PSEL_BITS = 10
-BRRIP_PROB = 32         # average 1/32 inserts as SRRIP
+PSEL_BITS = 5
+BRRIP_PROB = 32         # average 1/X inserts as SRRIP
 
 class DRRIPCache:
     def __init__(self, num_sets, assoc, max_rrpv=3, num_leader_sets=2, psel_bits=10, brrip_prob=32):
