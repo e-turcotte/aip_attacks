@@ -107,6 +107,5 @@ if __name__ == "__main__":
 
     if len(sys.argv) == 2:
         run_trace(sys.argv[1], cache)
-    else:
-        run_interactive(cache)
+    run_interactive(cache)
 
