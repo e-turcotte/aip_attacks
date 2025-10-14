@@ -12,20 +12,24 @@ PSEL_BITS = 5
 BRRIP_PROB = 32         # average 1/X inserts as SRRIP
 
 class DRRIPCache:
-    def __init__(self, num_sets, assoc, max_rrpv=3, num_leader_sets=2, psel_bits=10, brrip_prob=32):
-        self.num_sets = num_sets
-        self.assoc = assoc
-        self.max_rrpv = max_rrpv
-        self.sets = [[{'tag': None, 'rrpv': max_rrpv} for _ in range(assoc)] for _ in range(num_sets)]
+    def __init__(self, init_state=False):
+        self.num_sets = NUM_SETS
+        self.assoc = ASSOC
+        self.max_rrpv = MAX_RRPV
+        
+        if init_state:
+            self.sets = [[{'tag': '~init', 'rrpv': random.randint(0,MAX_RRPV)} for _ in range(ASSOC)] for _ in range(NUM_SETS)]
+        else:
+            self.sets = [[{'tag': '~empty', 'rrpv': MAX_RRPV} for _ in range(ASSOC)] for _ in range(NUM_SETS)]
 
-        self.num_leader_sets = num_leader_sets
-        self.psel_max = (1 << psel_bits) - 1
+        self.num_leader_sets = NUM_LEADER_SETS
+        self.psel_max = (1 << PSEL_BITS) - 1
         self.psel = self.psel_max // 2
-        self.brrip_prob = brrip_prob
+        self.brrip_prob = BRRIP_PROB
 
-        step = num_sets // (2 * num_leader_sets)
-        self.srrip_leaders = [(i * step * 2) % num_sets for i in range(num_leader_sets)]
-        self.brrip_leaders = [(i * step * 2 + step) % num_sets for i in range(num_leader_sets)]
+        step = NUM_SETS // (2 * NUM_LEADER_SETS)
+        self.srrip_leaders = [(i * step * 2) % NUM_SETS for i in range(NUM_LEADER_SETS)]
+        self.brrip_leaders = [(i * step * 2 + step) % NUM_SETS for i in range(NUM_LEADER_SETS)]
 
     def _policy_for_set(self, set_idx):
         if set_idx in self.srrip_leaders:
@@ -70,7 +74,7 @@ class DRRIPCache:
                 label = "B"
             else:
                 label = "f"
-            line_str = " | ".join(f"{line['tag'] if line['tag'] else 'empty'}({line['rrpv']})" for line in cache_set)
+            line_str = " | ".join(f"{line['tag']}({line['rrpv']})" for line in cache_set)
             print(f"Set {i:2d} {label}: {line_str}")
         follower_policy = "SRRIP" if self.psel >= self.psel_max // 2 else "BRRIP"
         print(f"PSEL={self.psel}, Follower policy={follower_policy}\n")
@@ -103,9 +107,10 @@ def run_interactive(cache):
         cache.print_state()
 
 if __name__ == "__main__":
-    cache = DRRIPCache(NUM_SETS, ASSOC, MAX_RRPV, NUM_LEADER_SETS, PSEL_BITS, BRRIP_PROB)
+    cache = DRRIPCache(False)
 
     if len(sys.argv) == 2:
         run_trace(sys.argv[1], cache)
+    cache.print_state()
     run_interactive(cache)
 
