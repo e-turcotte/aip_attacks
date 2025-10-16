@@ -10,14 +10,15 @@ MAX_RRPV = 3
 NUM_LEADER_SETS = 2     # per policy
 PSEL_BITS = 5
 BRRIP_PROB = 32         # average 1/X inserts as SRRIP
+INIT_STATE = True
 
 class DRRIPCache:
-    def __init__(self, init_state=False):
+    def __init__(self):
         self.num_sets = NUM_SETS
         self.assoc = ASSOC
         self.max_rrpv = MAX_RRPV
         
-        if init_state:
+        if INIT_STATE:
             self.sets = [[{'tag': '~init', 'rrpv': random.randint(0,MAX_RRPV)} for _ in range(ASSOC)] for _ in range(NUM_SETS)]
         else:
             self.sets = [[{'tag': '~empty', 'rrpv': MAX_RRPV} for _ in range(ASSOC)] for _ in range(NUM_SETS)]
@@ -107,7 +108,7 @@ def run_interactive(cache):
         cache.print_state()
 
 if __name__ == "__main__":
-    cache = DRRIPCache(False)
+    cache = DRRIPCache()
 
     if len(sys.argv) == 2:
         run_trace(sys.argv[1], cache)
