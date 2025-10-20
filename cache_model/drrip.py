@@ -17,16 +17,17 @@ class DRRIPCache:
         self.num_sets = NUM_SETS
         self.assoc = ASSOC
         self.max_rrpv = MAX_RRPV
+        self.psel_max = (1 << PSEL_BITS) - 1
+        self.brrip_prob = BRRIP_PROB
         
         if INIT_STATE:
             self.sets = [[{'tag': '~init', 'rrpv': random.randint(0,MAX_RRPV)} for _ in range(ASSOC)] for _ in range(NUM_SETS)]
+            self.psel = random.randint(0,self.psel_max)
         else:
             self.sets = [[{'tag': '~empty', 'rrpv': MAX_RRPV} for _ in range(ASSOC)] for _ in range(NUM_SETS)]
+            self.psel = self.psel_max // 2
 
         self.num_leader_sets = NUM_LEADER_SETS
-        self.psel_max = (1 << PSEL_BITS) - 1
-        self.psel = self.psel_max // 2
-        self.brrip_prob = BRRIP_PROB
 
         step = NUM_SETS // (2 * NUM_LEADER_SETS)
         self.srrip_leaders = [(i * step * 2) % NUM_SETS for i in range(NUM_LEADER_SETS)]
@@ -112,6 +113,7 @@ if __name__ == "__main__":
 
     if len(sys.argv) == 2:
         run_trace(sys.argv[1], cache)
+        print(f"\n===Exiting cache trace, Entering interactive mode===\n\n")
     cache.print_state()
     run_interactive(cache)
 
