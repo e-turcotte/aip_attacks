@@ -5,7 +5,7 @@ import random
 
 # === Cache Configuration Macros ===
 NUM_SETS = 16
-ASSOC = 4
+ASSOC = 8
 INIT_STATE = True
 
 class TreePLRUCache:
@@ -114,6 +114,6 @@ if __name__ == "__main__":
     if len(sys.argv) == 2:
         run_trace(sys.argv[1], cache)
         print(f"\n===Exiting cache trace, Entering interactive mode===\n\n")
-    cache.print_state()
-    run_interactive(cache)
+    #cache.print_state()
+    #run_interactive(cache)
 

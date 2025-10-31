@@ -5,7 +5,7 @@ import random
 
 # === Cache Configuration Macros ===
 NUM_SETS = 16
-ASSOC = 4
+ASSOC = 16
 MAX_RRPV = 3
 NUM_LEADER_SETS = 2     # per policy
 PSEL_BITS = 5
