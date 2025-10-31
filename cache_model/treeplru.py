@@ -23,32 +23,34 @@ class TreePLRUCache:
         while 2**self.tree_lvls < ASSOC:
             self.tree_lvls = self.tree_lvls + 1
         for idx in range(NUM_SETS):
-            self.eval_tree(self.sets[idx], self.trees[idx])
+            self._eval_tree(self.sets[idx], self.trees[idx])
 
     def access(self, set_idx, tag):
-        for way_idx, line in enumerate(self.sets[set_idx]):
+        cache_set = self.sets[set_idx]
+        tree = self.trees[set_idx]
+
+        for way_idx, line in enumerate(cache_set):
             if line['tag'] == tag:
-                self.set_tree(self.sets[set_idx], self.trees[set_idx], way_idx)
-                self.eval_tree(self.sets[set_idx], self.trees[set_idx])
+                self._set_tree(cache_set, tree, way_idx)
+                self._eval_tree(cache_set, tree)
                 return True
 
         with open('tplru_miss.trace', 'a') as f:
             f.write(f"{set_idx} {tag}\n")
 
         while True:
-            for way_idx, line in enumerate(self.sets[set_idx]):
+            for way_idx, line in enumerate(cache_set):
                 if line['tplru'] == self.max_tplru:
                     line['tag'] = tag
-                    self.set_tree(self.sets[set_idx], self.trees[set_idx], way_idx)
-                    self.eval_tree(self.sets[set_idx], self.trees[set_idx])
+                    self._set_tree(cache_set, tree, way_idx)
+                    self._eval_tree(cache_set, tree)
                     return False
 
-    def set_tree(self, cache_set, tree, way_idx):
+    def _set_tree(self, cache_set, tree, way_idx):
         lvl = 0
         mid_way = ASSOC / 2
         tree_idx = 0
         while lvl < self.tree_lvls:
-            print(lvl, mid_way, tree_idx)
             tree[tree_idx] = 1 if way_idx < mid_way else 0
             lvl = lvl + 1
             tree_idx = 1 + (0 if way_idx < mid_way else 2**(self.tree_lvls-lvl)-1)
@@ -58,15 +60,15 @@ class TreePLRUCache:
             line['tplru'] = 0
 
 
-    def eval_tree(self, subset, limb):
+    def _eval_tree(self, subset, limb):
         for i, way in enumerate(subset):
             way['tplru'] = way['tplru']*2 + (limb[0] if i >= len(subset)/2 else limb[0]^1)
 
         if len(subset) == 2 and len(limb) == 1:
             return
 
-        self.eval_tree(subset[:int(len(subset)/2)], limb[1:int((len(limb)-1)/2)+1])
-        self.eval_tree(subset[int(len(subset)/2):], limb[int((len(limb)-1)/2)+1:])
+        self._eval_tree(subset[:int(len(subset)/2)], limb[1:int((len(limb)-1)/2)+1])
+        self._eval_tree(subset[int(len(subset)/2):], limb[int((len(limb)-1)/2)+1:])
 
 
     def print_state(self):
