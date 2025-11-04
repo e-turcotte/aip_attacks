@@ -32,7 +32,6 @@ class TreePLRUCache:
         for way_idx, line in enumerate(cache_set):
             if line['tag'] == tag:
                 self._set_tree(cache_set, tree, way_idx)
-                self._eval_tree(cache_set, tree)
                 return True
 
         with open('tplru_miss.trace', 'a') as f:
@@ -43,7 +42,6 @@ class TreePLRUCache:
                 if line['tplru'] == self.max_tplru:
                     line['tag'] = tag
                     self._set_tree(cache_set, tree, way_idx)
-                    self._eval_tree(cache_set, tree)
                     return False
 
     def _set_tree(self, cache_set, tree, way_idx):
@@ -53,11 +51,13 @@ class TreePLRUCache:
         while lvl < self.tree_lvls:
             tree[tree_idx] = 1 if way_idx < mid_way else 0
             lvl = lvl + 1
-            tree_idx = 1 + (0 if way_idx < mid_way else 2**(self.tree_lvls-lvl)-1)
+            tree_idx = tree_idx + 1 + (0 if way_idx < mid_way else 2**(self.tree_lvls-lvl)-1)
             mid_way = mid_way + ASSOC/2**(lvl+1) * (-1 if way_idx < mid_way else 1)
 
         for line in cache_set:
             line['tplru'] = 0
+
+        self._eval_tree(cache_set, tree)
 
 
     def _eval_tree(self, subset, limb):
@@ -115,7 +115,7 @@ if __name__ == "__main__":
 
     if len(sys.argv) == 2:
         run_trace(sys.argv[1], cache)
-        print(f"\n===Exiting cache trace, Entering interactive mode===\n\n")
+    #    print(f"\n===Exiting cache trace, Entering interactive mode===\n\n")
     #cache.print_state()
     #run_interactive(cache)
 
