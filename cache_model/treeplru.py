@@ -1,15 +1,13 @@
 #! /usr/bin/python3
 
-import sys
 import random
 
 # === Cache Configuration Macros ===
-NUM_SETS = 16
-ASSOC = 8
-INIT_STATE = True
+# NUM_SETS
+# ASSOC
 
 class TreePLRUCache:
-    def __init__(self):
+    def __init__(self, NUM_SETS, ASSOC, INIT_STATE):
         self.num_sets = NUM_SETS
         self.assoc = ASSOC
         self.max_tplru = ASSOC-1
@@ -34,9 +32,6 @@ class TreePLRUCache:
                 self._set_tree(cache_set, tree, way_idx)
                 return True
 
-        with open('tplru_miss.trace', 'a') as f:
-            f.write(f"{set_idx} {tag}\n")
-
         while True:
             for way_idx, line in enumerate(cache_set):
                 if line['tplru'] == self.max_tplru:
@@ -46,13 +41,13 @@ class TreePLRUCache:
 
     def _set_tree(self, cache_set, tree, way_idx):
         lvl = 0
-        mid_way = ASSOC / 2
+        mid_way = self.assoc / 2
         tree_idx = 0
         while lvl < self.tree_lvls:
             tree[tree_idx] = 1 if way_idx < mid_way else 0
             lvl = lvl + 1
             tree_idx = tree_idx + 1 + (0 if way_idx < mid_way else 2**(self.tree_lvls-lvl)-1)
-            mid_way = mid_way + ASSOC/2**(lvl+1) * (-1 if way_idx < mid_way else 1)
+            mid_way = mid_way + self.assoc/2**(lvl+1) * (-1 if way_idx < mid_way else 1)
 
         for line in cache_set:
             line['tplru'] = 0
@@ -76,46 +71,3 @@ class TreePLRUCache:
             line_str = " | ".join(f"{line['tag']}({line['tplru']})" for line in cache_set)
             print(f"Set {i:2d} TREE[{''.join(str(n) for n in self.trees[i])}]: {line_str}")
         print(f"")
-
-def run_trace(filename, cache):
-    with open(filename, 'r') as f:
-        for line in f:
-            parts = line.strip().split()
-            if len(parts) != 2:
-                continue
-            set_idx, tag = int(parts[0]), parts[1]
-            hit = cache.access(set_idx, tag)
-            print(f"Access set {set_idx}, tag {tag} -> {'HIT' if hit else 'MISS'}")
-            cache.print_state()
-
-def run_interactive(cache):
-    while True:
-        try:
-            line = input("Next Access: ").strip()
-        except EOFError:
-            break
-        if line.lower() in ('q', 'quit'):
-            break
-        if line.lower().split(' ')[0] in ('f', 'file'):
-            print(f"\n===Entering cache trace===\n\n")
-            run_trace(line.split(' ')[1], cache)
-            print(f"\n===Exiting cache trace, Entering interactive mode===\n\n")
-            cache.print_state()
-            continue
-        parts = line.split()
-        if len(parts) != 2:
-            continue
-        set_idx, tag = int(parts[0]), parts[1]
-        hit = cache.access(set_idx, tag)
-        print(f"Access set {set_idx}, tag {tag} -> {'HIT' if hit else 'MISS'}")
-        cache.print_state()
-
-if __name__ == "__main__":
-    cache = TreePLRUCache()
-
-    if len(sys.argv) == 2:
-        run_trace(sys.argv[1], cache)
-    #    print(f"\n===Exiting cache trace, Entering interactive mode===\n\n")
-    #cache.print_state()
-    #run_interactive(cache)
-

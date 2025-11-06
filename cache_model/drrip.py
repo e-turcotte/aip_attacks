@@ -1,19 +1,18 @@
 #! /usr/bin/python3
 
-import sys
 import random
 
 # === Cache Configuration Macros ===
-NUM_SETS = 16
-ASSOC = 16
-MAX_RRPV = 3
-NUM_LEADER_SETS = 2     # per policy
-PSEL_BITS = 5
-BRRIP_PROB = 32         # average 1/X inserts as SRRIP
-INIT_STATE = True
+# NUM_SETS
+# ASSOC
+# MAX_RRPV
+# INSERTION_POS
+# NUM_LEADER_SETS -- per policy
+# PSEL_BITS
+# BRRIP_PROB -- average 1/X inserts as SRRIP
 
 class DRRIPCache:
-    def __init__(self):
+    def __init__(self, NUM_SETS, ASSOC, MAX_RRPV, INSERTION_POS, NUM_LEADER_SETS, PSEL_BITS, BRRIP_PROB, INIT_STATE):
         self.num_sets = NUM_SETS
         self.assoc = ASSOC
         self.max_rrpv = MAX_RRPV
@@ -53,9 +52,6 @@ class DRRIPCache:
                     self.psel = max(self.psel - 1, 0)
                 return True
 
-        with open('drrip_miss.trace', 'a') as f:
-            f.write(f"{set_idx} {tag}\n")
-
         while True:
             for line in cache_set:
                 if line['rrpv'] == self.max_rrpv:
@@ -83,46 +79,3 @@ class DRRIPCache:
             print(f"Set {i:2d} {label}: {line_str}")
         follower_policy = "SRRIP" if self.psel >= self.psel_max // 2 else "BRRIP"
         print(f"PSEL={self.psel}, Follower policy={follower_policy}\n")
-
-def run_trace(filename, cache):
-    with open(filename) as f:
-        for line in f:
-            parts = line.strip().split()
-            if len(parts) != 2:
-                continue
-            set_idx, tag = int(parts[0]), parts[1]
-            hit = cache.access(set_idx, tag)
-            print(f"Access set {set_idx}, tag {tag} -> {'HIT' if hit else 'MISS'}")
-            cache.print_state()
-
-def run_interactive(cache):
-    while True:
-        try:
-            line = input("Next Access: ").strip()
-        except EOFError:
-            break
-        if line.lower() in ('q', 'quit'):
-            break
-        if line.lower().split(' ')[0] in ('f', 'file'):
-            print(f"\n===Entering cache trace===\n\n")
-            run_trace(line.split(' ')[1], cache)
-            print(f"\n===Exiting cache trace, Entering interactive mode===\n\n")
-            cache.print_state()
-            continue
-        parts = line.split()
-        if len(parts) != 2:
-            continue
-        set_idx, tag = int(parts[0]), parts[1]
-        hit = cache.access(set_idx, tag)
-        print(f"Access set {set_idx}, tag {tag} -> {'HIT' if hit else 'MISS'}")
-        cache.print_state()
-
-if __name__ == "__main__":
-    cache = DRRIPCache()
-
-    if len(sys.argv) == 2:
-        run_trace(sys.argv[1], cache)
-    #    print(f"\n===Exiting cache trace, Entering interactive mode===\n\n")
-    #cache.print_state()
-    #run_interactive(cache)
-

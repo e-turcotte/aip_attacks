@@ -1,33 +1,4 @@
-0 S1
-0 S2
-0 S3
-0 S4
-0 S5
-0 S6
-0 S7
-0 S8
-0 S9
-0 S0
-0 S1
-0 S2
-0 S3
-0 S4
-0 S5
-0 S6
-0 S7
-0 S8
-0 S9
-0 S0
-0 S1
-0 S2
-0 S3
-0 S4
-0 S5
-0 S6
-0 S7
-0 S8
-0 S9
-0 S0
+f traces/cyclic/sat_srrip.trace
 
 1 A
 1 B
@@ -77,3 +48,4 @@
 1 N
 1 O
 1 P
+q

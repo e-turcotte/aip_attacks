@@ -1,0 +1,24 @@
+{
+	"L1": {
+		"CACHE_RP": "TreePLRU",
+		"NUM_SETS": 16,
+		"ASSOC": 8
+	},
+	"L2": {
+		"CACHE_RP": "SRRIP",
+		"NUM_SETS": 16,
+		"ASSOC": 8,
+		"MAX_RRPV": 3,
+		"INSERTION_POS": 2
+	},
+	"LLC": {
+		"CACHE_RP": "DRRIP",
+		"NUM_SETS": 16,
+		"ASSOC": 16,
+		"MAX_RRPV": 3,
+		"INSERTION_POS": 2,
+		"NUM_LEADER_SETS": 2,
+		"PSEL_BITS": 5,
+		"BRRIP_PROB": 32
+	}
+}
