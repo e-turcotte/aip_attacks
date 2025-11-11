@@ -67,7 +67,9 @@ class TreePLRUCache:
 
 
     def print_state(self):
+        print_str = ''
         for i, cache_set in enumerate(self.sets):
             line_str = " | ".join(f"{line['tag']}({line['tplru']})" for line in cache_set)
-            print(f"Set {i:2d} TREE[{''.join(str(n) for n in self.trees[i])}]: {line_str}")
-        print(f"")
+            print_str += f"Set {i:2d} TREE[{''.join(str(n) for n in self.trees[i])}]: {line_str}"
+        print_str += '\n'
+        return print_str

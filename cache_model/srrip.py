@@ -36,7 +36,9 @@ class SRRIPCache:
                 line['rrpv'] += 1
 
     def print_state(self):
+        print_str = ''
         for i, cache_set in enumerate(self.sets):
             line_str = " | ".join(f"{line['tag']}({line['rrpv']})" for line in cache_set)
-            print(f"Set {i:2d}: {line_str}")
-        print(f"")
+            print_str += f"Set {i:2d}: {line_str}\n"
+        print_str += '\n'
+        return print_str

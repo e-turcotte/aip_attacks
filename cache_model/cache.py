@@ -8,24 +8,40 @@ from srrip import SRRIPCache
 from drrip import DRRIPCache
 
 INIT_STATE = True
-CACHE_NAME = ''
 
-def perform_access(cache, access):
+LOG_FILE = ''
+TRACE_FILE = ''
+
+def perform_access(cache, access, interact):
     if access.lower() in ('q', 'quit'):
         return 1
 
     if access.split(' ')[0].lower() in ('f', 'file'):
-        print(f"\n===Entering cache trace: {access.split(' ')[1]}===\n\n")
+        if interact:
+            print(f"\n===Entering cache trace: {access.split(' ')[1]}===\n\n")
+        with open(LOG_FILE, 'a') as f:
+            f.write(f"\n===Entering cache trace: {access.split(' ')[1]}===\n\n\n")
         run_trace(access.split(' ')[1], cache)
-        print(f"\n===Exiting cache trace: {access.split(' ')[1]}===\n\n")
-        cache.print_state()
+        if interact:
+            print(f"\n===Exiting cache trace: {access.split(' ')[1]}===\n\n")
+            print(cache.print_state())
+        with open(LOG_FILE, 'a') as f:
+            f.write(f"\n===Exiting cache trace: {access.split(' ')[1]}===\n\n\n")
+            f.write(cache.print_state() + '\n')
         return 0
 
     if access.lower() in ('i', 'interact'):
-        print(f"\n===Entering interactive mode===\n\n")
+        if interact:
+            print(f"\n===Entering interactive mode===\n\n")
+        with open(LOG_FILE, 'a') as f:
+            f.write(f"\n===Entering interactive mode===\n\n\n")
         run_interactive(cache)
-        print(f"\n===Exiting interactive mode===\n\n")
-        cache.print_state()
+        if interact:
+            print(f"\n===Exiting interactive mode===\n\n")
+            print(cache.print_state())
+        with open(LOG_FILE, 'a') as f:
+            f.write(f"\n===Exiting interactive mode===\n\n\n")
+            f.write(cache.print_state() + '\n')
         return 0
     
     parts = access.split()
@@ -34,19 +50,23 @@ def perform_access(cache, access):
 
     set_idx, tag = int(parts[0]), parts[1]
     hit = cache.access(set_idx, tag)
-    print(f"Access set {set_idx}, tag {tag} -> {'HIT' if hit else 'MISS'}")
+    if interact:
+        print(f"Access set {set_idx}, tag {tag} -> {'HIT' if hit else 'MISS'}")
+        print(cache.print_state())
+    with open(LOG_FILE, 'a') as f:
+        f.write(f"Access set {set_idx}, tag {tag} -> {'HIT' if hit else 'MISS'}\n")
+        f.write(cache.print_state() + '\n')
     if not hit:
-        with open(f"{CACHE_NAME}_miss.trace", 'a') as f:
+        with open(TRACE_FILE, 'a') as f:
             f.write(f"{set_idx} {tag}\n")
 
-    cache.print_state()
     return 0
 
 def run_trace(filename, cache):
     with open(filename, 'r') as f:
         for line in f:
-            print(line)
-            if perform_access(cache, line.strip()):
+            #print(line)
+            if perform_access(cache, line.strip(), False):
                 break
 
 def run_interactive(cache):
@@ -56,15 +76,18 @@ def run_interactive(cache):
         except EOFError:
             break
         
-        if perform_access(cache, line):
+        if perform_access(cache, line, True):
             break
 
-if __name__ == "__main__":
-    CACHE_NAME = sys.argv[1]
+def run_cache(name, suffix, trace):
+    global LOG_FILE 
+    LOG_FILE = f"{name}{suffix}.log"
+    global TRACE_FILE 
+    TRACE_FILE = f"{name}{suffix}_miss.trace"
 
     cache_setup = dict()
     with open('cache_macros.json', 'r') as f:
-        cache_setup = json.load(f)[CACHE_NAME]
+        cache_setup = json.load(f)[name]
 
     match cache_setup['CACHE_RP'].lower():
         case 'treeplru':
@@ -76,9 +99,13 @@ if __name__ == "__main__":
         case _:
             print('ERROR: Not a valid $RP')
 
-    if len(sys.argv) == 3:
-        run_trace(sys.argv[2], cache)
+    if trace:
+        run_trace(trace, cache)
     else:
         cache.print_state()
         run_interactive(cache)
 
+
+
+if __name__ == "__main__":
+    run_cache(sys.argv[1], '', sys.argv[2] if len(sys.argv) == 3 else None)

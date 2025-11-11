@@ -68,6 +68,7 @@ class DRRIPCache:
                 line['rrpv'] += 1
 
     def print_state(self):
+        print_str = ''
         for i, cache_set in enumerate(self.sets):
             if i in self.srrip_leaders:
                 label = "S"
@@ -76,6 +77,7 @@ class DRRIPCache:
             else:
                 label = "f"
             line_str = " | ".join(f"{line['tag']}({line['rrpv']})" for line in cache_set)
-            print(f"Set {i:2d} {label}: {line_str}")
+            print_str += f"Set {i:2d} {label}: {line_str}\n"
         follower_policy = "SRRIP" if self.psel >= self.psel_max // 2 else "BRRIP"
-        print(f"PSEL={self.psel}, Follower policy={follower_policy}\n")
+        print_str += f"PSEL={self.psel}, Follower policy={follower_policy}\n"
+        return print_str
