@@ -8,7 +8,7 @@
 		"CACHE_RP": "SRRIP",
 		"NUM_SETS": 16,
 		"ASSOC": 8,
-		"MAX_RRPV": 3,
+		"MAX_RRPV": 1,
 		"INSERTION_POS": 2
 	},
 	"LLC": {
@@ -16,7 +16,7 @@
 		"NUM_SETS": 16,
 		"ASSOC": 16,
 		"MAX_RRPV": 3,
-		"INSERTION_POS": 2,
+		"INSERTION_POS": 1,
 		"NUM_LEADER_SETS": 2,
 		"PSEL_BITS": 5,
 		"BRRIP_PROB": 32

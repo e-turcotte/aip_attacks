@@ -9,7 +9,6 @@ from drrip import DRRIPCache
 
 INIT_STATE = True
 CACHE_NAME = ''
-TRACE_LIST = set()
 
 def perform_access(cache, access):
     if access.lower() in ('q', 'quit'):
@@ -29,14 +28,6 @@ def perform_access(cache, access):
         cache.print_state()
         return 0
     
-    if access.split(' ')[0].lower() in ('t', 'trace'):
-        tracer = access.split(' ')[1]
-        if tracer in TRACE_LIST:
-            TRACE_LIST.remove(tracer)
-        else:
-            TRACE_LIST.add(access.split(' ')[1])
-        return 0
-
     parts = access.split()
     if len(parts) != 2:
         return 0
@@ -45,9 +36,8 @@ def perform_access(cache, access):
     hit = cache.access(set_idx, tag)
     print(f"Access set {set_idx}, tag {tag} -> {'HIT' if hit else 'MISS'}")
     if not hit:
-        for tracer in TRACE_LIST:
-            with open(tracer, 'a') as f:
-                f.write(f"{set_idx} {tag}\n")
+        with open(f"{CACHE_NAME}_miss.trace", 'a') as f:
+            f.write(f"{set_idx} {tag}\n")
 
     cache.print_state()
     return 0
@@ -71,7 +61,6 @@ def run_interactive(cache):
 
 if __name__ == "__main__":
     CACHE_NAME = sys.argv[1]
-    TRACE_LIST.add(f"{CACHE_NAME}_miss.trace")
 
     cache_setup = dict()
     with open('cache_macros.json', 'r') as f:
