@@ -1,0 +1,8 @@
+Coffee Lake
+
+Associativity: 16 way
+Slicing: 12 way
+Number of sets: 1024
+Cache line size: 64
+
+      iiiiiiiiiioooooo
