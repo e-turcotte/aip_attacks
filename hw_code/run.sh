@@ -1,3 +1,4 @@
+#!/bin/bash
 for i in $(seq 1 50); do
   # Only print output on the 1st iteration and every 25th iteration
   if (( i == 1 || i % 25 == 0 )); then

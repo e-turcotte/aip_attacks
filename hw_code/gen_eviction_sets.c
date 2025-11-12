@@ -8,7 +8,7 @@ struct access_stream{
   int*  sequence;
   int** addresses;
 };
-uint8_t**  gen_evict_sets(uint64_t index, int slice);
+uint8_t**  gen_evict_sets(uint64_t index, int slice, uint8_t** free_sets);
 uint64_t calibrate_latency();
 uint64_t check_evict(uint8_t** evict_sets, uint64_t threshold, int size);
 bool find_minimal_set_recursive(uint8_t** original_set, bool* is_active, 
@@ -23,31 +23,37 @@ int main(){
     }    
     uint64_t threshold = calibrate_latency();
     
-    uint8_t** evict_sets = gen_evict_sets(68, 0);
+    uint8_t** free_sets = calloc( SIZE,sizeof(uint8_t*));
+    uint8_t** evict_sets = gen_evict_sets(0, 1, free_sets);
 
-    if(evict_sets[0] == 0){
-        free(evict_sets);
+    if(free_sets[0] == 0){
+        free(free_sets);
         return 0;
     }
 
     uint64_t hit_cnt = check_evict(evict_sets, threshold, SIZE);
     
     if(hit_cnt == 0){
+        // printf("HITCNT == 0\n");
         bool* is_active = (bool*)malloc(sizeof(bool) * SIZE);
         for (int i = 0; i < SIZE; i++) {
             is_active[i] = true;
         }
         bool correct = find_minimal_set_recursive(evict_sets, is_active, SIZE, SIZE, GOAL, threshold);
         if(correct){
-            printf("HURRAH! YOUR HASHING IS MESSED UP\n");
             uint8_t** smart_subset = create_subset(evict_sets,is_active, SIZE,GOAL);
-            for(int i = 0; i < GOAL; i++){
+            if(check_evict(smart_subset, threshold, GOAL) == 0 && check_evict(smart_subset, threshold, GOAL) == 0){
+                printf("HURRAH! YOUR HASHING IS MESSED UP\n");
+                for(int i = 0; i < GOAL; i++){
                 // printf("%llu Thresh | %llu Hit_Cnt/50\n", threshold, hit_cnt);
                 if(evict_sets[i] != 0){
-                    printf("0x%p, ",(uint64_t)virt2phys(evict_sets[i], false));
+                    // printf("l:0x%llu, ",(uint64_t)virt2phys(smart_subset[i], false));
+                    printf("0x%zx, ",(uint64_t)virt2phys(smart_subset[i], false));
                 }
             }   
             printf("\n");
+            }
+            
             free(smart_subset);
         }
         free(is_active);
@@ -55,10 +61,11 @@ int main(){
 
     ptedit_cleanup();
     for(int i = 0; i < SIZE; i++){
-        if(evict_sets[i] != 0){
-            free(evict_sets[i]);
+        if(free_sets[i] != 0){
+            free(free_sets[i]);
         }
     }
+    free(free_sets);
     free(evict_sets);
     return 0;
 }
@@ -103,7 +110,7 @@ bool find_minimal_set_recursive(uint8_t** original_set, bool* is_active,
         // printf("Trying to remove item at original index %d...\n", i);
         
         // 3. Check if this smaller set still works
-        if (check_evict(test_set, threshold, next_size)) {
+        if (check_evict(test_set, threshold, next_size) == 0) {
             // It works! Recursively try to prune this *new* set
             bool found_solution = find_minimal_set_recursive(original_set, is_active, 
                                                              n, next_size, target_size, threshold);
@@ -130,55 +137,65 @@ bool find_minimal_set_recursive(uint8_t** original_set, bool* is_active,
 
 uint64_t check_evict(uint8_t** evict_sets, uint64_t threshold, int size){
     uint64_t hit_cnt = 0;
+    uint8_t* victim = evict_sets[0];
     for(int j = 0; j < 50; j++){
         for(int i = 0; i < size; i ++){
             _mm_clflush(evict_sets[i]);
         }
         _mm_mfence();
         uint64_t access_time = 0;
-        for(int i = 0; i < size+1; i++){
-            access_time = _time_maccess(evict_sets[i%size]);
-            if(i == size && access_time < threshold){
-                // printf("AT == %llu\n", access_time);
-                hit_cnt += 1;
-            }
-            else if(i == size){
-                // printf("AT == %llu\n", access_time);
-            }
+        for(int i = 0; i < size; i++){
+            uint8_t* a = evict_sets[i%size];
+            access_time = (volatile) _time_maccess(a);
             _mm_mfence();
         }
-    }
-    if(hit_cnt == 0){
-        // printf("Begin\n");
-        // for(int i = 0; i < size; i++){
-        //     // printf("%llu Thresh | %llu Hit_Cnt/50\n", threshold, hit_cnt);
-        //     if(evict_sets[i] != 0){
-        //         printf("0x%p, ",(uint64_t)virt2phys(evict_sets[i], false));
-        //     }
-        // }   
-        // printf("\n");
+        for(int i = 1; i < size; i++){
+            uint8_t* a = evict_sets[i%size];
+            access_time = (volatile) _time_maccess(a);
+            _mm_mfence();
+        }
+        for(int i = 1; i < size; i++){
+            uint8_t* a = evict_sets[i%size];
+            access_time = (volatile) _time_maccess(a);
+            _mm_mfence();
+        }
+         _mm_mfence();
+        access_time = (volatile) _time_maccess(victim);
+        if(access_time < threshold){
+                hit_cnt += 1;
+        }
+        _mm_mfence();
     }
     return hit_cnt;
 }
 
 
-uint8_t** gen_evict_sets(uint64_t index, int slice){
+uint8_t** gen_evict_sets(uint64_t index, int slice, uint8_t** free_sets){
     uint8_t** evict_sets = calloc( SIZE,sizeof(uint8_t*));
     int ctr = 0;
     while(ctr != SIZE){
-        uint8_t* tmp = malloc(4096);        
-        uint64_t phys = (uint64_t)virt2phys(tmp, false);
-        int tmp_slice = compute_slice(phys,12);
-        uint64_t tmp_idx = (phys >> 6) & 0x03FF;
-        // printf("\n %llu \n", phys);
-        // printf("\n %llu Slice | Index %llu \n", tmp_slice, tmp_idx);
-        if(tmp_slice == slice &&  tmp_idx == index){
-            // printf("\n Hit %llu \n", phys);
-            evict_sets[ctr] = tmp;
-            ctr += 1;
-        }
-        else{
-            free(tmp);
+        uint8_t* page = malloc(4096);   
+        
+        bool found = false;
+        for(int i = 0; i < 2048; i+=64){
+            uint8_t* tmp = page + i;
+            uint64_t phys = (uint64_t)virt2phys(tmp, false);
+            int tmp_slice = compute_slice(phys,12);
+            // int tmp_slice = get_address_slice(phys);
+            uint64_t tmp_idx = (phys >> 6) & 0x03FF;
+            // printf("\n %llu \n", phys);
+            // printf("\n %llu Slice | Index %llu \n", tmp_slice, tmp_idx);
+            if(tmp_slice == slice &&  tmp_idx == index){
+                // printf("\n Hit %llu \n", phys);
+                evict_sets[ctr] = tmp;
+                free_sets[ctr] = page;
+                ctr += 1;
+                found = true;
+                break;
+            }
+        }       
+        if(!found){
+            free(page);
         }
     }
     return evict_sets;
