@@ -8,24 +8,67 @@ struct access_stream{
   int*  sequence;
   int** addresses;
 };
+uint8_t** get_pruned_evic_set(uint8_t** free_sets, bool* suc);
 uint8_t**  gen_evict_sets(uint64_t index, int slice, uint8_t** free_sets);
 uint64_t calibrate_latency();
 uint64_t check_evict(uint8_t** evict_sets, uint64_t threshold, int size);
+uint64_t check_evict_full(uint8_t** evict_sets, uint64_t threshold, int size);
+
 bool find_minimal_set_recursive(uint8_t** original_set, bool* is_active, 
                                 int n, int current_size, int target_size, uint64_t threshold);
 uint8_t** create_subset(uint8_t** original_set, bool* is_active, int n, int active_count);
+
 int SIZE = 25;
 int GOAL = 17;
+
 int main(){
     if (ptedit_init()) {
       printf(TAG_FAIL "Error: Could not initalize PTEditor, did you load the kernel module?\n");
       return 1;
     }    
-    uint64_t threshold = calibrate_latency();
     
-    uint8_t** free_sets = calloc( SIZE,sizeof(uint8_t*));
-    uint8_t** evict_sets = gen_evict_sets(0, 1, free_sets);
+    bool* suc = malloc(sizeof(bool));
+    if (suc == NULL) {
+        printf("Error: Failed to allocate memory for 'suc'\n");
+        return 1;
+    }
+    uint8_t** free_sets;
+    suc[0] = false;
+    uint8_t** smart_subset;
+    while(!suc[0]){
+        free_sets = calloc( SIZE,sizeof(uint8_t*));
+        smart_subset = get_pruned_evic_set(free_sets, suc);
+        // printf("%d \n", suc[0]);
+        if(!suc[0]){
+            for(int i = 0; i < SIZE; i++){
+                if(free_sets[i] != 0){
+                    free(free_sets[i]);
+                }
+            }
+            free(free_sets);
+            free(smart_subset);
+        }   
+    }
+    
 
+    
+
+    ptedit_cleanup();
+    for(int i = 0; i < SIZE; i++){
+        if(free_sets[i] != 0){
+            free(free_sets[i]);
+        }
+    }
+    free(free_sets);
+    free(smart_subset);
+    free(suc);
+    return 0;
+}
+
+uint8_t**  get_pruned_evic_set(uint8_t** free_sets, bool* suc ){
+    uint64_t threshold = calibrate_latency();
+    uint8_t** evict_sets = gen_evict_sets(0, 1, free_sets);
+    
     if(free_sets[0] == 0){
         free(free_sets);
         return 0;
@@ -43,32 +86,35 @@ int main(){
         if(correct){
             uint8_t** smart_subset = create_subset(evict_sets,is_active, SIZE,GOAL);
             if(check_evict(smart_subset, threshold, GOAL) == 0 && check_evict(smart_subset, threshold, GOAL) == 0){
-                printf("HURRAH! YOUR HASHING IS MESSED UP\n");
-                for(int i = 0; i < GOAL; i++){
-                // printf("%llu Thresh | %llu Hit_Cnt/50\n", threshold, hit_cnt);
-                if(evict_sets[i] != 0){
-                    // printf("l:0x%llu, ",(uint64_t)virt2phys(smart_subset[i], false));
-                    printf("0x%zx, ",(uint64_t)virt2phys(smart_subset[i], false));
-                }
-            }   
-            printf("\n");
+                    printf("HURRAH! YOUR HASHING IS MESSED UP\n");
+                    for(int i = 0; i < GOAL; i++){
+                    // printf("%llu Thresh | %llu Hit_Cnt/50\n", threshold, hit_cnt);
+                    if(evict_sets[i] != 0){
+                        // printf("l:0x%llu, ",(uint64_t)virt2phys(smart_subset[i], false));
+                        printf("0x%zx, ",(uint64_t)virt2phys(smart_subset[i], false));
+                    }
+                }   
+                printf("\n");
+                printf("Base Miss Vector: ");
+                check_evict_full(evict_sets, threshold, SIZE);
+                printf("Pruned Miss Vector: ");
+                check_evict_full(smart_subset, threshold, GOAL);
+                printf("\n");
+                free(evict_sets);
+                free(is_active);
+                suc[0] = true;
+                return smart_subset;
             }
             
             free(smart_subset);
         }
         free(is_active);
     }
-
-    ptedit_cleanup();
-    for(int i = 0; i < SIZE; i++){
-        if(free_sets[i] != 0){
-            free(free_sets[i]);
-        }
-    }
-    free(free_sets);
     free(evict_sets);
+    suc[0] = false;
     return 0;
 }
+
 uint8_t** create_subset(uint8_t** original_set, bool* is_active, int n, int active_count) {
     uint8_t** subset = (uint8_t**)malloc(sizeof(uint8_t*) * active_count);
     if (!subset) {
@@ -154,11 +200,6 @@ uint64_t check_evict(uint8_t** evict_sets, uint64_t threshold, int size){
             access_time = (volatile) _time_maccess(a);
             _mm_mfence();
         }
-        for(int i = 1; i < size; i++){
-            uint8_t* a = evict_sets[i%size];
-            access_time = (volatile) _time_maccess(a);
-            _mm_mfence();
-        }
          _mm_mfence();
         access_time = (volatile) _time_maccess(victim);
         if(access_time < threshold){
@@ -169,6 +210,30 @@ uint64_t check_evict(uint8_t** evict_sets, uint64_t threshold, int size){
     return hit_cnt;
 }
 
+uint64_t check_evict_full(uint8_t** evict_sets, uint64_t threshold, int size){
+    uint64_t hit_cnt = 0;
+    uint8_t* victim = evict_sets[0];
+    uint8_t* tmp = evict_sets[0];
+    uint64_t miss_vect = 0;
+    for(int i = 1; i <= size; i++){
+        uint64_t tmp_hit_cnt = check_evict(evict_sets, threshold, size);
+        if(tmp_hit_cnt){
+            hit_cnt += tmp_hit_cnt;
+            miss_vect = (miss_vect << 1 ) | 1;
+        }
+        else{
+            miss_vect = (miss_vect << 1 ) ;
+        }
+        if(i != size){
+            tmp = evict_sets[0];
+            evict_sets[0] = evict_sets[i];
+            evict_sets[i] = tmp;
+        }
+        
+    }
+    printf("0x%llx\n", miss_vect);
+    return hit_cnt;
+}
 
 uint8_t** gen_evict_sets(uint64_t index, int slice, uint8_t** free_sets){
     uint8_t** evict_sets = calloc( SIZE,sizeof(uint8_t*));
