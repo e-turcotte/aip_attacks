@@ -1,3 +1,5 @@
+import sys
+
 def parse_letter_sequence(data):
     """
     Parses a string of letter data, mapping each unique letter to a unique number.
@@ -8,7 +10,7 @@ def parse_letter_sequence(data):
     Returns:
         None. Prints the results directly.
     """
-    
+    tot_entries = 0
     letter_to_num_map = {}
     numbered_sequence = []
     next_unique_id = 0 # Start counting from 1
@@ -33,7 +35,7 @@ def parse_letter_sequence(data):
         # Ensure we have at least two parts (like '1' and 'T')
         if len(parts) < 2:
             continue
-            
+        
         letter = parts[1]
 
         # Check if we've seen this letter before
@@ -60,15 +62,27 @@ def parse_letter_sequence(data):
     print("--- Number Sequence ---")
     print(numbered_sequence)
 
+    print("--- Sequence Length ---")
+    print(len(numbered_sequence))
+
 # Run the parser function
 if __name__ == "__main__":
-    trace_file = "trace.txt"
+    # Check if a filename is provided as a command-line argument
+    if len(sys.argv) != 2:
+        # sys.argv[0] is the script name itself
+        print(f"Usage: python {sys.argv[0]} <filename>", file=sys.stderr)
+        sys.exit(1) # Exit with a non-zero status to indicate an error
+
+    trace_file = sys.argv[1] # Get the filename from the first argument
+    
     try:
         with open(trace_file, 'r') as f:
             file_content = f.read()
         parse_letter_sequence(file_content)
         
     except FileNotFoundError:
-        print(f"Error: The file '{trace_file}' was not found.")
+        print(f"Error: The file '{trace_file}' was not found.", file=sys.stderr)
+        sys.exit(1)
     except Exception as e:
-        print(f"An error occurred: {e}")
+        print(f"An error occurred: {e}", file=sys.stderr)
+        sys.exit(1)
