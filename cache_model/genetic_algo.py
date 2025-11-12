@@ -10,61 +10,112 @@ from cache import run_cache
 # ====================================
 # Configurable parameters
 # ====================================
-POP_SIZE = 10
-GENERATIONS = 10
-MUTATION_RATE = 0.3
-CROSSOVER_RATE = 0.5
-LENGTH_PENALTY = 1   # Penalty per trace line
-ALPHABET = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'L', 'M', 'N', 'O', 'P']
+POP_SIZE = 50
+GENERATIONS = 100
+MUTATION_RATE = 0.5
+CROSSOVER_RATE = 0.8
+LENGTH_PENALTY = 0.01   # Penalty per trace line
+ALPHABET = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
 NUM_WORKERS = 8          # Adjust based on your CPU cores
 OUTPUT_DIR = "traces/ga"  # Folder to save traces
 
 # ====================================
 # User-implemented stub
 # ====================================
-def evaluate_trace(trace_lines):
-    srrip_avg_misses = 0
-    brrip_avg_misses = 0
-    with open(f"test_pop{trace_lines[0]}_srrip.trace", "w") as f:
-        f.write("f traces/cyclic/sat_srrip.trace\n\n")
-        f.write("\n".join(trace_lines[1]))
-    with open(f"test_pop{trace_lines[0]}_brrip.trace", "w") as f:
-        f.write("f traces/cyclic/sat_brrip.trace\n\n")
-        f.write("\n".join(trace_lines[1]))
+def sweep_traces():
+    for gen in range(GENERATIONS+1):
+        srrip_avg_misses = 0
+        brrip_avg_misses = 0
+
+        trace = []
+        with open(OUTPUT_DIR + f"/best_gen{gen:02d}.trace", "r") as f:
+            trace = [line for line in f]
+
+        with open(f"test_gen{gen}_srrip.trace", "w") as f:
+            f.write("f traces/cyclic/sat_srrip.trace\n\n")
+            f.write("\n".join(trace))
+        with open(f"test_gen{gen}_brrip.trace", "w") as f:
+            f.write("f traces/cyclic/sat_brrip.trace\n\n")
+            f.write("\n".join(trace))
    
-    for _ in range(10):
-        run_cache("L1", f"_pop{trace_lines[0]}_srrip", f"test_pop{trace_lines[0]}_srrip.trace")
-        run_cache("L2", f"_pop{trace_lines[0]}_srrip", f"L1_pop{trace_lines[0]}_srrip_miss.trace")
-        run_cache("LLC", f"_pop{trace_lines[0]}_srrip", f"L2_pop{trace_lines[0]}_srrip_miss.trace")
-        with open(f"LLC_pop{trace_lines[0]}_srrip_miss.trace", "r") as f:
-            srrip_avg_misses += sum((0 if line.split(' ')[0] == 0 else 1) for line in f)
+        for _ in range(10):
+            run_cache("L1", f"_gen{gen}_srrip", f"test_gen{gen}_srrip.trace")
+            run_cache("L2", f"_gen{gen}_srrip", f"L1_gen{gen}_srrip_miss.trace")
+            run_cache("LLC", f"_gen{gen}_srrip", f"L2_gen{gen}_srrip_miss.trace")
+            with open(f"LLC_gen{gen}_srrip_miss.trace", "r") as f:
+                srrip_avg_misses += sum([(0 if line.split(' ')[0] == 0 else 1) for line in f])
+            
+            run_cache("L1", f"_gen{gen}_brrip", f"test_gen{gen}_brrip.trace")
+            run_cache("L2", f"_gen{gen}_brrip", f"L1_gen{gen}_brrip_miss.trace")
+            run_cache("LLC", f"_gen{gen}_brrip", f"L2_gen{gen}_brrip_miss.trace")
+            with open(f"LLC_gen{gen}_brrip_miss.trace", "r") as f:
+                brrip_avg_misses += sum([(0 if line.split(' ')[0] == 4 else 1) for line in f])
         
-        run_cache("L1", f"_pop{trace_lines[0]}_brrip", f"test_pop{trace_lines[0]}_brrip.trace")
-        run_cache("L2", f"_pop{trace_lines[0]}_brrip", f"L1_pop{trace_lines[0]}_brrip_miss.trace")
-        run_cache("LLC", f"_pop{trace_lines[0]}_brrip", f"L2_pop{trace_lines[0]}_brrip_miss.trace")
-        with open(f"LLC_pop{trace_lines[0]}_brrip_miss.trace", "r") as f:
-            brrip_avg_misses += sum((0 if line.split(' ')[0] == 4 else 1) for line in f)
-    
-    srrip_avg_misses /= 10
-    brrip_avg_misses /= 10
+            os.remove(f"L1_gen{gen}_srrip_miss.trace")
+            os.remove(f"L1_gen{gen}_srrip.log")
+            os.remove(f"L1_gen{gen}_brrip_miss.trace")
+            os.remove(f"L1_gen{gen}_brrip.log")
+            os.remove(f"L2_gen{gen}_srrip_miss.trace")
+            os.remove(f"L2_gen{gen}_srrip.log")
+            os.remove(f"L2_gen{gen}_brrip_miss.trace")
+            os.remove(f"L2_gen{gen}_brrip.log")
+            os.remove(f"LLC_gen{gen}_srrip_miss.trace")
+            os.remove(f"LLC_gen{gen}_srrip.log")
+            os.remove(f"LLC_gen{gen}_brrip_miss.trace")
+            os.remove(f"LLC_gen{gen}_brrip.log")
+        
+        os.remove(f"test_gen{gen}_srrip.trace")
+        os.remove(f"test_gen{gen}_brrip.trace")
+        
+        srrip_avg_misses /= 10
+        brrip_avg_misses /= 10
 
-    os.remove(f"L1_pop{trace_lines[0]}_srrip_miss.trace")
-    os.remove(f"L1_pop{trace_lines[0]}_srrip.log")
-    os.remove(f"L2_pop{trace_lines[0]}_srrip_miss.trace")
-    os.remove(f"L2_pop{trace_lines[0]}_srrip.log")
-    os.remove(f"LLC_pop{trace_lines[0]}_srrip_miss.trace")
-    os.remove(f"LLC_pop{trace_lines[0]}_srrip.log")
-    os.remove(f"test_pop{trace_lines[0]}_srrip.trace")
-    os.remove(f"L1_pop{trace_lines[0]}_brrip_miss.trace")
-    os.remove(f"L1_pop{trace_lines[0]}_brrip.log")
-    os.remove(f"L2_pop{trace_lines[0]}_brrip_miss.trace")
-    os.remove(f"L2_pop{trace_lines[0]}_brrip.log")
-    os.remove(f"LLC_pop{trace_lines[0]}_brrip_miss.trace")
-    os.remove(f"LLC_pop{trace_lines[0]}_brrip.log")
-    os.remove(f"test_pop{trace_lines[0]}_brrip.trace")
-    
-    return srrip_avg_misses, brrip_avg_misses
+        print('GEN:', gen, 'SRRIP:', srrip_avg_misses, 'BRRIP:', brrip_avg_misses, 'LEN:', len(trace))
 
+
+def evaluate_trace(pop_idx, trace_lines):
+        srrip_avg_misses = 0
+        brrip_avg_misses = 0
+        with open(f"test_pop{pop_idx}_srrip.trace", "w") as f:
+            f.write("f traces/cyclic/sat_srrip.trace\n\n")
+            f.write("\n".join(trace_lines))
+        with open(f"test_pop{pop_idx}_brrip.trace", "w") as f:
+            f.write("f traces/cyclic/sat_brrip.trace\n\n")
+            f.write("\n".join(trace_lines))
+   
+        for i in range(10):
+            run_cache("L1", f"_pop{pop_idx}_srrip", f"test_pop{pop_idx}_srrip.trace")
+            run_cache("L2", f"_pop{pop_idx}_srrip", f"L1_pop{pop_idx}_srrip_miss.trace")
+            run_cache("LLC", f"_pop{pop_idx}_srrip", f"L2_pop{pop_idx}_srrip_miss.trace")
+            with open(f"LLC_pop{pop_idx}_srrip_miss.trace", "r") as f:
+                srrip_avg_misses += sum([(0 if line.split(' ')[0] == 0 else 1) for line in f])
+            
+            run_cache("L1", f"_pop{pop_idx}_brrip", f"test_pop{pop_idx}_brrip.trace")
+            run_cache("L2", f"_pop{pop_idx}_brrip", f"L1_pop{pop_idx}_brrip_miss.trace")
+            run_cache("LLC", f"_pop{pop_idx}_brrip", f"L2_pop{pop_idx}_brrip_miss.trace")
+            with open(f"LLC_pop{pop_idx}_brrip_miss.trace", "r") as f:
+                brrip_avg_misses += sum([(0 if line.split(' ')[0] == 4 else 1) for line in f])
+
+            os.remove(f"L1_pop{pop_idx}_srrip_miss.trace")
+            os.remove(f"L1_pop{pop_idx}_srrip.log")
+            os.remove(f"L1_pop{pop_idx}_brrip_miss.trace")
+            os.remove(f"L1_pop{pop_idx}_brrip.log")
+            os.remove(f"L2_pop{pop_idx}_srrip_miss.trace")
+            os.remove(f"L2_pop{pop_idx}_srrip.log")
+            os.remove(f"L2_pop{pop_idx}_brrip_miss.trace")
+            os.remove(f"L2_pop{pop_idx}_brrip.log")
+            os.remove(f"LLC_pop{pop_idx}_srrip_miss.trace")
+            os.remove(f"LLC_pop{pop_idx}_srrip.log")
+            os.remove(f"LLC_pop{pop_idx}_brrip_miss.trace")
+            os.remove(f"LLC_pop{pop_idx}_brrip.log")
+        
+        os.remove(f"test_pop{pop_idx}_srrip.trace")
+        os.remove(f"test_pop{pop_idx}_brrip.trace")
+        
+        srrip_avg_misses /= 10
+        brrip_avg_misses /= 10
+
+        return srrip_avg_misses, brrip_avg_misses
 
 
 # ====================================
@@ -104,9 +155,11 @@ def crossover_trace(trace1, trace2):
 # Fitness evaluation (parallelized)
 # ====================================
 def fitness(trace):
+    pop_idx = trace[0]
+    trace_lines = trace[1]
     try:
-        A, B = evaluate_trace(trace)
-        return abs(A - B) - LENGTH_PENALTY * len(trace) * len(trace)
+        A, B = evaluate_trace(pop_idx, trace_lines)
+        return abs(A - B) - LENGTH_PENALTY * (25-len(trace_lines))**2
     except Exception:
         return -1e9  # Invalid trace penalty
 
@@ -168,15 +221,11 @@ def genetic_algorithm():
     # Save final best
     final_path = save_trace(best_trace, GENERATIONS, best_score)
     print(f"\nFinal best trace saved to {final_path}")
-    return best_trace, best_score
 
 
 # ====================================
 # Main entry
 # ====================================
 if __name__ == "__main__":
-    best_trace, score = genetic_algorithm()
-    print("\nBest trace found:")
-    print("\n".join(best_trace))
-    print(f"Final fitness: {score:.4f}")
-
+    genetic_algorithm()
+    sweep_traces()
