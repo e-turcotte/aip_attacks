@@ -18,7 +18,7 @@ bool find_minimal_set_recursive(uint8_t** original_set, bool* is_active,
                                 int n, int current_size, int target_size, uint64_t threshold);
 uint8_t** create_subset(uint8_t** original_set, bool* is_active, int n, int active_count);
 
-int SIZE = 25;
+int SIZE = 128;
 int GOAL = 17;
 
 int main(){
@@ -50,7 +50,10 @@ int main(){
         }   
     }
     
-
+   
+    /*for(int i = 0; i < GOAL; i++){
+	printf("[%d]: 0x%x\n", i, smart_subset[i]);
+    }*/
     
 
     ptedit_cleanup();
@@ -85,7 +88,7 @@ uint8_t**  get_pruned_evic_set(uint8_t** free_sets, bool* suc ){
         bool correct = find_minimal_set_recursive(evict_sets, is_active, SIZE, SIZE, GOAL, threshold);
         if(correct){
             uint8_t** smart_subset = create_subset(evict_sets,is_active, SIZE,GOAL);
-            if(check_evict(smart_subset, threshold, GOAL) == 0 && check_evict(smart_subset, threshold, GOAL) == 0){
+            if(check_evict(evict_sets, threshold, SIZE) == 0 && check_evict(smart_subset, threshold, GOAL) == 0){
                     printf("HURRAH! YOUR HASHING IS MESSED UP\n");
                     for(int i = 0; i < GOAL; i++){
                     // printf("%llu Thresh | %llu Hit_Cnt/50\n", threshold, hit_cnt);
@@ -183,30 +186,46 @@ bool find_minimal_set_recursive(uint8_t** original_set, bool* is_active,
 
 uint64_t check_evict(uint8_t** evict_sets, uint64_t threshold, int size){
     uint64_t hit_cnt = 0;
+    uint64_t access_time = 0;
+
+    _mm_clflush(evict_sets[0]);
+    _mm_mfence();
     uint8_t* victim = evict_sets[0];
+    access_time = (volatile) _time_maccess(victim);
+    _mm_mfence();
+
+    for(int i = 1; i < size; i++){
+    	victim = evict_sets[i%size];
+        access_time = (volatile) _time_maccess(victim);
+        _mm_mfence();
+    }
+    
+    victim = evict_sets[0];
+    access_time = (volatile) _time_maccess(victim);
+    _mm_mfence();
+
     for(int j = 0; j < 50; j++){
-        for(int i = 0; i < size; i ++){
+        /*for(int i = 1; i < size; i ++){
             _mm_clflush(evict_sets[i]);
         }
-        _mm_mfence();
-        uint64_t access_time = 0;
-        for(int i = 0; i < size; i++){
+        _mm_mfence();*/
+        /*for(int i = 0; i < size; i++){
             uint8_t* a = evict_sets[i%size];
             access_time = (volatile) _time_maccess(a);
             _mm_mfence();
-        }
+        }*/
         for(int i = 1; i < size; i++){
             uint8_t* a = evict_sets[i%size];
             access_time = (volatile) _time_maccess(a);
             _mm_mfence();
         }
-         _mm_mfence();
-        access_time = (volatile) _time_maccess(victim);
-        if(access_time < threshold){
-                hit_cnt += 1;
-        }
-        _mm_mfence();
+        //_mm_mfence();
     }
+    access_time = (volatile) _time_maccess(victim);
+    if(access_time < threshold){
+        hit_cnt += 1;
+    }
+    _mm_mfence();
     return hit_cnt;
 }
 
