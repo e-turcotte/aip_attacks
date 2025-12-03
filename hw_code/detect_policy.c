@@ -8,6 +8,7 @@ struct access_stream{
   int*  sequence;
   int** addresses;
 };
+int send_bit(int srrip, uint8_t** leader_evset, uint8_t** follower_evset);
 uint8_t** get_pruned_evic_set(uint8_t** free_sets, uint64_t index, int slice, bool* suc);
 uint8_t**  gen_evict_sets(uint64_t index, int slice, uint8_t** free_sets);
 uint64_t calibrate_latency();
@@ -21,6 +22,8 @@ uint8_t** create_subset(uint8_t** original_set, bool* is_active, int n, int acti
 int SIZE = 128;
 int GOAL = 17;
 
+int idx_seq[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 7, 8, 9, 10, 0, 11, 12, 1, 13, 5, 4, 7, 5, 5, 10, 3, 9, 4, 8, 14, 6, 1, 15, 7, 12, 3, 3, 0, 15, 8, 5, 4, 14, 7, 12, 6, 2, 7, 13, 11, 9, 5, 7, 15, 12, 3, 1, 10, 10, 9, 12, 11, 10, 14, 7, 4, 6, 5, 9, 6, 4, 4, 13, 1, 14, 1, 0, 6, 12, 14, 14, 3, 12, 6, 14, 14, 12, 12, 9, 15, 3, 3, 0, 15, 8, 5, 4, 14, 7, 12, 6, 2, 7, 13, 11, 9, 5, 4, 6, 6, 5, 2, 15, 1, 2, 4, 5, 8, 10, 3, 7, 13, 4, 14, 7, 12, 6, 2, 7, 13, 11, 9, 10, 0, 11, 12, 1, 13, 5, 4, 7, 5, 5, 10, 3, 9, 4, 8, 14, 6, 1, 15, 7, 12, 3, 3, 0, 15, 8, 5, 4, 14, 13, 1, 15, 3, 10, 14, 1, 7, 8, 1, 4, 9, 13, 4, 10, 2, 6, 0, 6, 3, 8, 7, 8, 9, 10, 0, 11, 12, 1, 13, 5, 4, 7, 5, 5, 6, 6, 5, 4, 2, 15, 1, 2, 4, 5, 8, 10, 3, 7, 13, 11, 7, 13, 5, 0, 3, 4, 2, 10, 14, 7, 4, 6, 5, 9, 6, 4, 4, 13, 1, 14, 1, 0, 6, 12, 14, 14, 15, 6, 14, 14, 7, 5, 5, 10, 3, 9, 4, 8, 9, 10, 0, 11, 12, 1, 13, 5, 4, 7, 5, 5, 10, 3, 9, 4, 8, 14, 9, 10, 0, 11, 12, 1, 13, 5, 6, 7, 5, 5, 10, 3, 9, 4, 8, 14, 6, 1, 15, 7, 12, 3, 3, 0, 15, 8, 0, 15, 8, 5, 4, 14, 7, 12, 6, 2, 7, 13, 11, 9, 5, 4, 15, 6, 6, 6, 6, 8, 7, 8, 9, 10, 0, 11, 12, 3, 4, 5, 6, 7, 8, 7, 8, 9, 10, 0, 11, 12, 1, 13, 5, 4, 7, 5, 5, 10, 3, 9, 4, 8, 14, 6, 1, 15, 7, 12, 3, 3, 0, 15, 8, 5, 4, 14, 7, 12, 6, 2, 7, 13, 11, 9, 5, 4, 15, 6, 6, 6, 6, 8, 7, 8, 9, 10, 0, 11, 12, 1, 13, 5, 4, 7, 5, 5, 8, 15, 1, 13, 5, 4, 7, 5, 5, 10, 3, 9, 4, 8, 11, 12, 1, 2, 4, 9, 15, 4, 9, 13, 0, 8, 0, 11, 8, 7, 2, 5, 12, 15, 7, 8, 13, 1, 15, 13, 3, 5, 3, 7, 9, 6, 8, 15, 1, 13, 5, 4, 7, 5, 5, 10, 3, 9, 4, 8, 14, 6, 1, 15, 7, 12, 3, 10, 0, 7, 8, 7, 8, 9, 10, 0, 11, 12, 8, 11, 12, 1, 2, 4, 9, 15, 4, 9, 13, 0, 8, 0, 11, 8, 7, 2, 5, 12, 15, 7, 8, 13, 1, 15, 13, 3, 5, 3, 7, 9, 6, 8, 15, 1, 13, 5, 4, 7, 5, 5, 10, 3, 9, 4, 8, 14, 6, 1, 15, 7, 12, 3, 10, 0, 7, 8, 7, 8, 9, 10, 0, 11, 12, 1, 13, 5, 4, 7, 5, 5, 10, 3, 10, 3, 7, 13, 11, 7, 13, 5, 0, 3, 4, 2, 10, 14, 7, 4, 6, 5, 9, 6, 4, 4, 13, 1, 14, 1, 0, 6, 12, 14, 14, 15, 12, 6, 14, 14, 7, 5, 5, 10, 3, 9, 4, 8, 14, 6, 1, 15, 13, 5, 4, 7, 5, 5, 10, 3, 9, 4, 8, 14, 6, 1, 15, 7, 12, 3, 3, 0, 15, 8, 5, 4, 14, 7, 12, 6, 2, 7, 13, 11, 9, 10, 0, 11, 12, 1, 13, 5, 4, 7, 5, 5, 10, 3, 9, 4, 8, 14, 6, 1, 15, 7, 12, 3, 3, 1, 13, 5, 4, 7, 5, 5, 10, 3, 9, 4, 8, 14, 6, 1, 15, 7, 12, 3, 3, 0, 8, 5, 4, 14, 7, 12, 6, 2, 7, 13, 11, 9, 5, 7, 15, 12, 3, 1, 10, 10, 9, 12, 7, 5, 5, 10, 3, 9, 4, 8, 14, 6, 1, 15, 7, 12, 3, 10, 0, 7, 8, 7, 8, 9, 10, 0, 11, 12, 1, 13, 5, 4, 7, 5, 5, 10, 3, 10, 3, 7, 13, 11, 7, 13, 5, 0, 3, 4, 2, 10, 14, 7, 4, 6, 5, 9, 6, 4, 4, 13, 1, 14, 1, 0, 6, 12, 14, 14, 15, 12, 6, 14, 14, 7, 5, 5, 10, 3, 9, 4, 8, 14, 6, 1, 15, 13, 5, 4, 7, 5, 5, 10, 3, 9, 4, 8, 14, 6, 1, 15, 7, 12, 3, 3, 0, 15, 8, 5, 4, 14, 7, 12, 6, 2, 7, 13, 11, 9, 10, 0, 11, 12, 1, 13, 5, 4, 7, 5, 5, 10, 3, 9, 4, 8, 14, 6, 1, 15, 7, 12, 3, 3, 1, 13, 5, 4, 7, 5, 5, 10, 3, 9, 4, 8, 14, 6, 1, 15, 7, 12, 3, 3, 0, 8, 5, 4, 14, 7, 5, 4, 7, 5, 5, 10, 3, 9, 4, 8, 14, 9, 10, 0, 11, 12, 1, 13, 5, 6, 7, 5, 5, 10, 3, 9, 4, 8, 14, 6, 1, 15, 7, 12, 3, 3, 0, 15, 8, 0, 15, 8, 5, 4, 14, 7, 12, 6, 2, 7, 13, 11, 9, 5, 4, 15, 6, 6, 6, 6, 8, 7, 8, 9, 10, 0, 11, 12, 3, 4, 5, 6, 7, 8, 7, 8, 9, 10, 0, 11, 12, 1, 13, 5, 4, 7, 5, 5, 10, 3, 9, 4, 8, 14, 6, 1, 15, 7, 12, 3, 3, 0, 15, 8, 5, 4, 14, 7, 12, 6, 2, 7, 13, 11, 9, 5, 4, 15, 6, 6, 6, 6, 8, 7, 8, 9, 10, 0, 11, 12, 1, 13, 5, 4, 7, 5, 5, 8, 15, 1, 13, 5, 4, 7, 5, 5, 10, 3, 9, 4, 8, 11, 12, 1, 2, 4, 9, 15, 4, 9, 13, 0, 8, 0, 11, 8, 7, 2, 5, 12, 15, 7, 8, 13, 1, 15, 13, 3, 5, 3, 7, 9, 6, 8, 15, 1, 13, 5, 4, 7, 5, 5, 10, 3, 9, 4, 8, 14, 6, 1, 15, 7, 12, 3, 10, 0, 7, 8, 7, 8, 9, 10, 0, 11, 12, 1, 13, 5, 4, 7, 5, 5, 10, 3, 9, 4, 8, 14, 6, 1, 15, 7, 12, 3, 3, 0, 15, 8, 5, 4, 14, 7, 12, 6, 2, 7, 13, 11, 9, 5, 7, 15, 12, 3, 1, 10, 10, 9, 12, 11, 10, 14, 7, 4, 6, 5, 9, 6, 4, 4, 13, 1, 14, 1, 6, 12, 14, 14, 3, 12, 6, 14, 14, 12, 12, 9, 15, 3, 3, 0, 15, 8, 5, 4, 14, 7, 12, 6, 2, 7, 13, 11, 9, 5, 4, 15, 6, 6, 6, 6, 8, 7, 14, 10, 5, 9};
+
 int main(){
     if (ptedit_init()) {
       printf(TAG_FAIL "Error: Could not initalize PTEditor, did you load the kernel module?\n");
@@ -32,40 +35,131 @@ int main(){
         printf("Error: Failed to allocate memory for 'suc'\n");
         return 1;
     }
-    uint8_t** free_sets;
+    
+	uint8_t** free_sets1;
     suc[0] = false;
-    uint8_t** smart_subset;
+	uint8_t** leader_evset;
     while(!suc[0]){
-        free_sets = calloc( SIZE,sizeof(uint8_t*));
-        smart_subset = get_pruned_evic_set(free_sets, 0, 1, suc);
+        free_sets1 = calloc(SIZE,sizeof(uint8_t*));
+        leader_evset = get_pruned_evic_set(free_sets1, 0, 1, suc);
         // printf("%d \n", suc[0]);
         if(!suc[0]){
             for(int i = 0; i < SIZE; i++){
-                if(free_sets[i] != 0){
-                    free(free_sets[i]);
+                if(free_sets1[i] != 0){
+                    free(free_sets1[i]);
                 }
             }
-            free(free_sets);
-            free(smart_subset);
+            free(free_sets1);
+            free(leader_evset);
+        }   
+    }
+
+	
+	for(int j = 0; j < 50; j++){
+		for(int j = 1; j < GOAL; j++){
+        	_maccess(leader_evset[j]);
+            _mm_mfence();
+		}
+	}
+    
+
+	uint8_t** free_sets2;
+    suc[0] = false;
+	uint8_t** follower_evset;
+    while(!suc[0]){
+        free_sets2 = calloc( SIZE,sizeof(uint8_t*));
+        follower_evset = get_pruned_evic_set(free_sets2, 1, 1, suc);
+        // printf("%d \n", suc[0]);
+        if(!suc[0]){
+            for(int i = 0; i < SIZE; i++){
+                if(free_sets2[i] != 0){
+                    free(free_sets2[i]);
+                }
+            }
+            free(free_sets2);
+            free(follower_evset);
         }   
     }
     
-   
-    /*for(int i = 0; i < GOAL; i++){
-	printf("[%d]: 0x%x\n", i, smart_subset[i]);
-    }*/
-    
+	int recv = 0;
+	int msg = 67;
+	int snd = msg;
+	printf("=======CALIBRATING=======\n");
+	send_bit(0, leader_evset, follower_evset);
+	send_bit(1, leader_evset, follower_evset);
+
+	int time_sum = 0;
+	int num_bits = 0;
+	int times[] = {0, 0, 0, 0, 0, 0, 0};
+
+	uint64_t t_start = _timer_start();
+	printf("\n\n=======SENDING=======\n");
+	while(snd > 0){
+		int t = send_bit(snd & 0x1, leader_evset, follower_evset);
+		time_sum += t;
+		times[6-num_bits] = t;
+		num_bits++;
+
+		snd = snd >> 1;
+	}
+	int time_avg = time_sum / num_bits;
+	printf("\n\n=======RECEIVING=======\n");
+	printf("BIT CUTOFF: %d\n", time_avg);
+	for(int i = 0; i < num_bits; i++){
+		printf("BIT[%d]: %d --> %d\n", i, times[i], (times[i] > time_avg)? 0 : 1);
+
+		recv = (recv << 1) | ((times[i] > time_avg)? 0 : 1);	
+	}
+	uint64_t t_end = _timer_end();
+
+	printf("\n\n=======RESULTS=======\n");
+	printf("SENT: %d, RECEIVED: %d\n", msg, recv);
+	printf("Time for message: %d\n", t_end-t_start);
 
     ptedit_cleanup();
     for(int i = 0; i < SIZE; i++){
-        if(free_sets[i] != 0){
-            free(free_sets[i]);
+        if(free_sets1[i] != 0){
+            free(free_sets1[i]);
+        }
+        if(free_sets2[i] != 0){
+            free(free_sets2[i]);
         }
     }
-    free(free_sets);
-    free(smart_subset);
+    free(free_sets1);
+    free(free_sets2);
+    free(leader_evset);
+    free(follower_evset);
     free(suc);
     return 0;
+}
+
+int send_bit(int srrip, uint8_t** leader_evset, uint8_t** follower_evset){
+    uint64_t access_time = 0;
+	uint64_t threshold = calibrate_latency();
+	uint64_t tally = 0;
+    for(int k = 0; k < 100; k++){
+		for(int i = 0; i < 50; i++){
+			for(int j = srrip; j < GOAL; j++){
+        		_maccess(leader_evset[j]);
+            	_mm_mfence();
+			}
+		}
+		for(int i = 0; i < GOAL; i++){
+			_mm_clflush(follower_evset[i]);
+			_mm_mfence();
+		}
+		uint64_t t_start = _timer_start();
+		for(int i = 0; i < 1176; i++){
+        	_maccess(follower_evset[idx_seq[i]]);
+            _mm_mfence();
+		}
+		uint64_t t_end = _timer_end();
+		tally += t_end - t_start;
+	}
+
+	printf("%d: %d\n", srrip, tally/100);
+	return tally/100;
+	
 }
 
 uint8_t**  get_pruned_evic_set(uint8_t** free_sets, uint64_t index, int slice, bool* suc ){

@@ -11,11 +11,11 @@ from cache import run_cache
 # Configurable parameters
 # ====================================
 POP_SIZE = 50
-GENERATIONS = 100
+GENERATIONS = 10
 MUTATION_RATE = 0.5
 CROSSOVER_RATE = 0.8
 LENGTH_PENALTY = 0.01   # Penalty per trace line
-ALPHABET = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
+ALPHABET = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T']
 NUM_WORKERS = 8          # Adjust based on your CPU cores
 OUTPUT_DIR = "traces/ga"  # Folder to save traces
 
@@ -159,7 +159,7 @@ def fitness(trace):
     trace_lines = trace[1]
     try:
         A, B = evaluate_trace(pop_idx, trace_lines)
-        return abs(A - B) - LENGTH_PENALTY * (25-len(trace_lines))**2
+        return abs(A - B) #- LENGTH_PENALTY * (25-len(trace_lines))**2
     except Exception:
         return -1e9  # Invalid trace penalty
 
